@@ -8,8 +8,13 @@ module regfile (
 
     logic [31:0] regs [0:31];
 
-    assign rdata1 = (rs1 == 5'd0) ? 32'd0 : regs[rs1];
-    assign rdata2 = (rs2 == 5'd0) ? 32'd0 : regs[rs2];
+    assign rdata1 = regs[rs1];
+    assign rdata2 = regs[rs2];
+
+    initial begin
+        for (int i = 0; i < 32; i++)
+            regs[i] = 32'd0;
+    end
 
     always_ff @(posedge clk) begin
         if (we && rd != 5'd0)
