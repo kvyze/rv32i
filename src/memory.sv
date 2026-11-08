@@ -24,7 +24,7 @@ module memory import types::*; #(
     logic mem_we;
 
     initial begin
-        $readmemh("crt0/main.hex", mem);
+        $readmemh("build/program/program.hex", mem);
 
         for (int i = 0; i < SIZE; i++) begin
             mem0[i] = mem[i][7:0];

@@ -1,8 +1,8 @@
 module control_unit import types::*; (
-    input  logic          clk, rst, illegal, reg_write,
+    input  logic          clk, rst, illegal, reg_write, uart_tx_busy,
     input  instr_class_t  instr_class,
     input  logic [31:0]   alu_out,
-    output logic          inregs_we, dec_valid, reg_we, ram_we,
+    output logic          inregs_we, dec_valid, reg_we, ram_we, fetch,
     output regs_t         inreg,
     output alu_operand_t  alu_operand1, alu_operand2,
     output rd_src_t       rd_src,
@@ -16,7 +16,8 @@ module control_unit import types::*; (
         STATE_CALC_PC,
         STATE_EXECUTE,
         STATE_MEM_LOAD,
-        STATE_WRITEBACK
+        STATE_WRITEBACK,
+        STATE_WAIT_UART
     } state_t;
 
     state_t current_state, next_state;
@@ -27,7 +28,7 @@ module control_unit import types::*; (
 
     always_comb begin
         next_state = current_state;
-        {inregs_we, dec_valid, reg_we, ram_we} = '0;
+        {inregs_we, dec_valid, reg_we, ram_we, fetch} = '0;
         inreg = REGS_ALU_OUT;
         alu_operand1 = ALU_OPERAND_ZERO;
         alu_operand2 = ALU_OPERAND_FOUR;
@@ -38,13 +39,16 @@ module control_unit import types::*; (
         case (current_state)
             STATE_FETCH: begin
                 mem_addr_src = MEM_ADDR_SRC_IP;
+                fetch        = 1'b1;
                 next_state   = STATE_FETCH2;
             end
 
             STATE_FETCH2: begin
-                inregs_we  = 1'b1;
-                inreg      = REGS_IR;
-                next_state = STATE_CALC_PC;
+                mem_addr_src = MEM_ADDR_SRC_IP;
+                inregs_we    = 1'b1;
+                fetch        = 1'b1;
+                inreg        = REGS_IR;
+                next_state   = STATE_CALC_PC;
             end
 
             STATE_CALC_PC: begin
@@ -58,10 +62,7 @@ module control_unit import types::*; (
 
                 inregs_we = (instr_class != INSTR_JAL);
                 
-                if (instr_class == INSTR_BRANCH) begin
-                    dec_valid  = 1'b1;
-                    next_state = STATE_WRITEBACK;
-                end else if (instr_class == INSTR_AUIPC) begin
+                if (instr_class == INSTR_BRANCH || instr_class == INSTR_AUIPC) begin
                     dec_valid  = 1'b1;
                     next_state = STATE_WRITEBACK;
                 end else begin
@@ -101,7 +102,12 @@ module control_unit import types::*; (
 
                 ram_we     = (instr_class == INSTR_STORE);
                 reg_we     = 1'b1 & reg_write;
-                next_state = STATE_FETCH;
+                next_state = state_t'(uart_tx_busy ? STATE_WAIT_UART : STATE_FETCH);
+            end
+
+            STATE_WAIT_UART: begin
+                if (!uart_tx_busy) next_state = STATE_FETCH;
+                else next_state = STATE_WAIT_UART;
             end
         endcase
     end

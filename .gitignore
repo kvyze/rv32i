@@ -1,5 +1,1 @@
-sim/
-asm/
-gtk_filters/
-crt0/
-utils/
+build/

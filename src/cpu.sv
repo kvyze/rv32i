@@ -18,7 +18,7 @@ module cpu (
     instr_class_t  instr_class;
     logic          reg_write;
     mem_width_t    mem_width;
-    logic          mem_sign, illegal, dec_valid;
+    logic          mem_sign, illegal, dec_valid, fetch;
 
     regs_t         inreg;
     logic          inregs_we, reg_we;
@@ -33,7 +33,7 @@ module cpu (
     mem_addr_src_t mem_addr_src;
 
     always_comb begin
-        uart_tx_start = (instr_class == INSTR_STORE && !uart_tx_busy && alu_out == UART_TX_ADDR);
+        uart_tx_start = (!uart_tx_busy && alu_out == UART_TX_ADDR && ram_we);
         led1          = rst;
         busy          = uart_tx_busy;
         alu_op        = alu_op_t'(dec_valid ? alu_op_dec : alu_op_cu);
@@ -75,8 +75,8 @@ module cpu (
         endcase
     end
 
-    // rom u_rom (.clk(clk), .addr(rom_addr >> 2), .instr(instr));
-    memory u_memory (.*, .we(ram_we), .addr(mem_addr), .wd(rdata2), .rdata(ram_rdata));
+    memory u_memory (.*, .we(ram_we && (mem_addr[15] != 1'b1)), .addr(mem_addr), .wd(rdata2), .rdata(ram_rdata),
+                    .mem_sign(fetch ? 1'b1 : mem_sign), .mem_width(fetch ? MEM_WORD : mem_width));
     regfile u_regs (.*, .we(reg_we), .wd(reg_wd));
     uart_tx u_uart_tx (.*, .start(uart_tx_start), .data(rdata2), .busy(uart_tx_busy));
 

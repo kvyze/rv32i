@@ -21,8 +21,8 @@ module uart_tx (
             tick    <= 1'b0;
             count   <= 8'd0;
         end else begin
-            if (count >= FREQUENCY - 1) begin
-                tick  <= 1'b1;
+            if (count >= FREQUENCY - 1 || start) begin
+                tick  <= (start ? 1'b0 : 1'b1);
                 count <= 8'd0;
             end else begin
                 tick  <= 1'b0;
@@ -30,8 +30,8 @@ module uart_tx (
             end
 
             if (!busy && start) begin
-                sr   <= {1'b1, data, 1'b0};
-                busy <= 1'b1;
+                sr    <= {1'b1, data, 1'b0};
+                busy  <= 1'b1;
             end
 
             if (tick && busy) begin

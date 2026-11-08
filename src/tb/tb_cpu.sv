@@ -10,7 +10,7 @@ module tb_cpu;
     cpu dut (.*);
 
     initial begin
-        $dumpfile("wave.vcd");
+        $dumpfile("cpu_wave.vcd");
         $dumpvars(0, dut);
 
         rst = 1'b0;
